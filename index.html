@@ -38,12 +38,30 @@ body { margin:0; font-family:Inter; background:#f3f4f6; }
 .menu-item.active { color:#1f3d2b; font-weight:600; }
 .hidden { display:none; }
 
-/* TABLE STYLES */
-.table-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+/* TABLE STYLES & STICKY COLUMN FIX */
+.table-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; position: relative; }
 table { border-collapse: collapse; width: 100%; font-size: 13px; background: white; }
 th, td { padding: 12px; text-align: center; border-bottom: 1px solid #f1f5f9; border-right: 1px solid #f8fafc; white-space: nowrap; }
 th { background: #f8fafc; color: #64748b; font-weight: 600; }
-.sticky-col { position: sticky; left: 0; background: #fff; z-index: 10; text-align: left; border-right: 2px solid #f1f5f9; min-width: 130px; font-weight: 600; }
+
+/* FIXED: This ensures the channel name doesn't overlap when scrolling */
+.sticky-col { 
+    position: sticky; 
+    left: 0; 
+    background: #fff; 
+    z-index: 10; 
+    text-align: left; 
+    border-right: 2px solid #f1f5f9; 
+    min-width: 130px; 
+    font-weight: 600; 
+}
+th.sticky-col { background: #f8fafc; z-index: 11; }
+
+/* NEW ACCORDION STYLES FOR HOTEL TAB */
+.hotel-accordion { background: white; border-radius: 12px; margin-bottom: 10px; border: 1px solid #eef2f3; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+.acc-header { padding: 15px; background: #fff; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: 600; color: #1f3d2b; }
+.acc-content { display: none; border-top: 1px solid #f1f5f9; background: #fff; }
+.acc-content.active { display: block; }
 
 /* INSIGHTS DROPDOWNS */
 .ins-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px; cursor: pointer; }
@@ -86,7 +104,7 @@ th { background: #f8fafc; color: #64748b; font-weight: 600; }
             <div class="card">
                 <div class="download-btn" onclick="exportChart('hotelChart', 'Hotel_Trend')">⬇️</div>
                 <b>Hotel Price Trend (7 Days)</b>
-                <div style=""><canvas id="hotelChart"></canvas></div>
+                <div style="height:220px;"><canvas id="hotelChart"></canvas></div>
                 <div onclick="toggleLegend('legendBox')" class="legend-toggle">Show Legend ▼</div>
                 <div id="legendBox" style="display:none; margin-top:10px;"></div>
             </div>
@@ -94,23 +112,15 @@ th { background: #f8fafc; color: #64748b; font-weight: 600; }
             <div class="card">
                 <div class="download-btn" onclick="exportChart('otaChart', 'OTA_Trend')">⬇️</div>
                 <b>OTA Price Trend (7 Days)</b>
-                <div style=""><canvas id="otaChart"></canvas></div>
+                <div style="height:220px;"><canvas id="otaChart"></canvas></div>
                 <div onclick="toggleLegend('otaLegendBox')" class="legend-toggle">Show Legend ▼</div>
                 <div id="otaLegendBox" style="display:none; margin-top:10px;"></div>
             </div>
         </div>
 
         <div id="hotels" class="section hidden">
-            <div class="card" style="padding: 0; overflow: hidden;">
-                <div class="download-btn" style="top:14px; right:14px;" onclick="exportTable('hotelTable', 'Competitor_Rates')">⬇️</div>
-                <div style="padding: 14px 14px 5px 14px;"><b style="font-size: 0.9rem;">Competitor Rate Matrix</b></div>
-                <div class="table-container">
-                    <table id="hotelTable">
-                        <thead><tr id="hotelTableHeader"></tr></thead>
-                        <tbody id="hotelTableBody"></tbody>
-                    </table>
-                </div>
-            </div>
+            <div style="margin-bottom: 10px; font-size: 14px; font-weight: 600; color: #64748b;">Competitor Rate Matrix</div>
+            <div id="accordionContainer"></div>
         </div>
 
         <div id="otas" class="section hidden">
@@ -186,6 +196,11 @@ function toggleDrop(id) {
     el.style.display = el.style.display === "block" ? "none" : "block";
 }
 
+function toggleHotelAccordion(id) {
+    let content = document.getElementById(id);
+    content.classList.toggle('active');
+}
+
 const yourHotel = "Leela Palace";
 const chartColors = ["#3B82F6", "#EF4444", "#F59E0B", "#EAB308", "#14B8A6"];
 
@@ -201,11 +216,11 @@ function getHotels(date){
 }
 
 const otaData = [
-    {name:"Official Site", price:8200},
+    {name:"Goibibo", price:8800},
+    {name:"Makemytrip", price:8950},
     {name:"Booking.com", price:9200},
-    {name:"Expedia", price:9400},
     {name:"Agoda", price:8900},
-    {name:"Goibibo", price:8800}
+    {name:"Expedia", price:9400}
 ];
 
 let hotelChart, otaChart;
@@ -215,7 +230,7 @@ function render(){
     let minOTA = Math.min(...otaData.map(o => o.price));
     let sortedHotels = [...hotels].sort((a,b)=> a.name === yourHotel ? -1 : 1);
 
-    // HOME SUMMARY
+    // 1. HOME SUMMARY
     document.getElementById("hotelSummary").innerHTML = `<b>Best Available Rates</b>` + 
     sortedHotels.map(h => {
         if(!h.price) return `<div class="ota"><div>${h.name}</div><div style="color:red;">Sold Out</div></div>`;
@@ -232,10 +247,10 @@ function render(){
     document.getElementById("max").innerText="₹"+Math.max(...prices);
     document.getElementById("demand").innerText = (hotels.length - available.length) > 0 ? "High 🔥" : "Low";
 
-    // CHARTS DATA
+    // 2. CHARTS
     let labels=[]; for(let i=0;i<7;i++){ let d=new Date(dateInput.value); d.setDate(d.getDate()+i); labels.push(d.getDate()); }
 
-    // HOTEL CHART
+    // Hotel Chart
     let hotelDatasets = available.map((h,i)=>({
         label:h.name, data:[h.price,h.price+200,h.price-100,h.price+300,h.price+150,h.price+250,h.price+350],
         borderColor:chartColors[i], tension:0.4, borderWidth:3, pointRadius:2
@@ -247,7 +262,7 @@ function render(){
     });
     document.getElementById("legendBox").innerHTML = hotelDatasets.map((d,i)=>`<div class="legend-item"><div class="legend-left"><div class="dot" style="background:${chartColors[i]}"></div>${d.label}</div></div>`).join('');
 
-    // OTA CHART (NEW)
+    // OTA Chart
     let otaDatasets = otaData.map((o,i)=>({
         label:o.name, data:[o.price,o.price+150,o.price+50,o.price+200,o.price+100,o.price+300,o.price+250],
         borderColor:chartColors[i % chartColors.length], tension:0.4, borderWidth:3, pointRadius:2
@@ -259,26 +274,63 @@ function render(){
     });
     document.getElementById("otaLegendBox").innerHTML = otaDatasets.map((d,i)=>`<div class="legend-item"><div class="legend-left"><div class="dot" style="background:${chartColors[i % chartColors.length]}"></div>${d.label}</div></div>`).join('');
 
-    // MATRICES
+    // 3. UPDATED HOTEL TAB: ACCORDION DESIGN
     const startD = new Date(dateInput.value);
-    function renderMatrix(hId, bId, names) {
-        let head = `<th class="sticky-col">Name</th>`;
-        for(let i=0; i<7; i++) { 
-            let d = new Date(startD); d.setDate(d.getDate() + i); 
-            head += `<th>${d.getDate()} ${d.toLocaleString('en-IN', {month:'short'})}</th>`; 
-        }
-        document.getElementById(hId).innerHTML = head;
-        document.getElementById(bId).innerHTML = names.map(n => {
-            let row = `<tr><td class="sticky-col">${n.name}</td>`;
-            for(let i=0; i<7; i++) row += `<td>₹${(n.price || 8000) + (i * 100)}</td>`;
-            return row + "</tr>";
-        }).join('');
-    }
-    renderMatrix("hotelTableHeader", "hotelTableBody", hotels);
-    renderMatrix("otaTableHeader", "otaTableBody", otaData);
+    let accHtml = "";
+    hotels.forEach((hotel, idx) => {
+        let tableId = `acc-hotel-${idx}`;
+        accHtml += `
+        <div class="hotel-accordion">
+            <div class="acc-header" onclick="toggleHotelAccordion('${tableId}')">
+                <span>🏨 ${hotel.name}</span>
+                <span style="font-size:12px; color:#3b82f6;">View OTAs ▾</span>
+            </div>
+            <div id="${tableId}" class="acc-content">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="sticky-col">Channels</th>
+                                ${[...Array(7)].map((_, i) => {
+                                    let d = new Date(startD); d.setDate(d.getDate() + i);
+                                    return `<th>${d.getDate()} ${d.toLocaleString('en-IN', {month:'short'})}</th>`;
+                                }).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="background:#f0f9ff; font-weight:600;">
+                                <td class="sticky-col" style="background:#f0f9ff;">Direct Rate</td>
+                                ${[...Array(7)].map((_, i) => `<td>₹${(hotel.price || 8500) + (i * 100)}</td>`).join('')}
+                            </tr>
+                            ${otaData.map(ota => `
+                                <tr>
+                                    <td class="sticky-col" style="color:#3b82f6;">${ota.name}.com</td>
+                                    ${[...Array(7)].map((_, i) => `<td>₹${(hotel.price || 8500) + (i * 100) - 50}</td>`).join('')}
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>`;
+    });
+    document.getElementById("accordionContainer").innerHTML = accHtml;
 
-    // INSIGHTS
-    document.getElementById("insightsSummary").innerHTML = `<div style="color:#1f3d2b; font-weight:600;">Market Insight: ${new Date(dateInput.value).toLocaleDateString('en-IN', {day:'numeric', month:'long'})}</div><p style="font-size:12px; color:#64748b; margin-top:5px;">Check OTA price trends to ensure parity across channels.</p>`;
+    // 4. OTA MATRIX (Simple)
+    let otaHead = `<th class="sticky-col">OTA Name</th>`;
+    for(let i=0; i<7; i++) { 
+        let d = new Date(startD); d.setDate(d.getDate() + i); 
+        otaHead += `<th>${d.getDate()} ${d.toLocaleString('en-IN', {month:'short'})}</th>`; 
+    }
+    document.getElementById("otaTableHeader").innerHTML = otaHead;
+    document.getElementById("otaTableBody").innerHTML = otaData.map(o => {
+        let row = `<tr><td class="sticky-col">${o.name}</td>`;
+        for(let i=0; i<7; i++) row += `<td>₹${o.price + (i * 100)}</td>`;
+        return row + "</tr>";
+    }).join('');
+
+    // 5. INSIGHTS
+    document.getElementById("insightsSummary").innerHTML = `<div style="color:#1f3d2b; font-weight:600;">Market Insight: ${new Date(dateInput.value).toLocaleDateString('en-IN', {day:'numeric', month:'long'})}</div><p style="font-size:12px; color:#64748b; margin-top:5px;">Competitive monitoring: High demand detected for weekend dates.</p>`;
 }
 
 // EXPORTS
