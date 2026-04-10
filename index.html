@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>eGlobe Rate Shopper</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+<style>
+body { margin:0; font-family:Inter; background:#f3f4f6; }
+.app { max-width:390px; margin:auto; background:#fff; min-height:100vh; display:flex; flex-direction:column; }
+.header { background:#1f3d2b; color:white; padding:15px; }
+.header-top { display:flex; justify-content:space-between; align-items:center; }
+.date-picker { background:#2e5a42; border:none; color:white; padding:6px 10px; border-radius:8px; }
+.content { flex:1; overflow-y:auto; padding-bottom:70px; }
+.section { padding:15px; }
+
+/* CARDS */
+.card { background:white; border-radius:16px; padding:14px; margin-top:12px; box-shadow:0 5px 20px rgba(0,0,0,0.06); position: relative; }
+.download-btn { position: absolute; top: 12px; right: 12px; cursor: pointer; background: #f8fafc; border: 1px solid #e2e8f0; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; border-radius: 6px; font-size: 14px; z-index: 5; }
+
+.ota { display:flex; justify-content:space-between; padding:8px 0; }
+.grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.metric { background:white; padding:12px; border-radius:12px; box-shadow:0 5px 15px rgba(0,0,0,0.05); }
+
+/* LEGEND DROPDOWNS */
+.legend-item { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #eee; font-size:13px; }
+.legend-left { display:flex; align-items:center; gap:8px; }
+.dot { width:10px; height:10px; border-radius:50%; }
+.legend-toggle { margin-top:10px; font-size:13px; font-weight:600; color:#1f3d2b; cursor:pointer; }
+
+/* MENU */
+.menu { position:fixed; bottom:0; width:100%; max-width:390px; background:white; border-top:1px solid #eee; display:flex; z-index: 100; }
+.menu-item { flex:1; text-align:center; padding:10px; font-size:12px; color:#6b7280; cursor:pointer; }
+.menu-item.active { color:#1f3d2b; font-weight:600; }
+.hidden { display:none; }
+
+/* TABLE STYLES */
+.table-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; background: white; }
+th, td { padding: 12px; text-align: center; border-bottom: 1px solid #f1f5f9; border-right: 1px solid #f8fafc; white-space: nowrap; }
+th { background: #f8fafc; color: #64748b; font-weight: 600; }
+.sticky-col { position: sticky; left: 0; background: #fff; z-index: 10; text-align: left; border-right: 2px solid #f1f5f9; min-width: 130px; font-weight: 600; }
+
+/* INSIGHTS DROPDOWNS */
+.ins-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px; cursor: pointer; }
+.ins-row:last-child { border-bottom: none; }
+.ins-label { color: #64748b; font-weight: 500; display: flex; align-items: center; gap: 5px; }
+.ins-val { font-weight: 600; color: #1f3d2b; }
+.tag-sold { background: #fee2e2; color: #ef4444; padding: 2px 8px; border-radius: 4px; font-size: 11px; }
+.tag-avail { background: #dcfce7; color: #10b981; padding: 2px 8px; border-radius: 4px; font-size: 11px; }
+.dropdown-content { background: #f8fafc; border-radius: 8px; padding: 10px; margin-bottom: 10px; display: none; font-size: 12px; border: 1px solid #e2e8f0; }
+.dropdown-item { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dashed #cbd5e1; }
+</style>
+</head>
+
+<body>
+<div class="app">
+    <div class="header">
+        <div class="header-top">
+            <div>Grand Heritage</div>
+            <div style="display:flex; gap:8px;">
+                <input type="date" id="datePicker" class="date-picker">
+                <div onclick="location.reload()" style="background:#2e5a42;padding:6px 10px;border-radius:8px;cursor:pointer;">🔄</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="content">
+        <div id="dashboard" class="section">
+            <div class="grid">
+                <div class="metric"><b id="avg"></b><br>Avg Price</div>
+                <div class="metric"><b id="min"></b><br>Min Price</div>
+                <div class="metric"><b id="max"></b><br>Max Price</div>
+                <div class="metric"><b id="demand"></b><br>Demand</div>
+            </div>
+            
+            <div class="card">
+                <div class="download-btn" onclick="exportCard('hotelSummary', 'Rates_Summary')">⬇️</div>
+                <div id="hotelSummary"></div>
+            </div>
+
+            <div class="card">
+                <div class="download-btn" onclick="exportChart('hotelChart', 'Hotel_Trend')">⬇️</div>
+                <b>Hotel Price Trend (7 Days)</b>
+                <div style=""><canvas id="hotelChart"></canvas></div>
+                <div onclick="toggleLegend('legendBox')" class="legend-toggle">Show Legend ▼</div>
+                <div id="legendBox" style="display:none; margin-top:10px;"></div>
+            </div>
+
+            <div class="card">
+                <div class="download-btn" onclick="exportChart('otaChart', 'OTA_Trend')">⬇️</div>
+                <b>OTA Price Trend (7 Days)</b>
+                <div style=""><canvas id="otaChart"></canvas></div>
+                <div onclick="toggleLegend('otaLegendBox')" class="legend-toggle">Show Legend ▼</div>
+                <div id="otaLegendBox" style="display:none; margin-top:10px;"></div>
+            </div>
+        </div>
+
+        <div id="hotels" class="section hidden">
+            <div class="card" style="padding: 0; overflow: hidden;">
+                <div class="download-btn" style="top:14px; right:14px;" onclick="exportTable('hotelTable', 'Competitor_Rates')">⬇️</div>
+                <div style="padding: 14px 14px 5px 14px;"><b style="font-size: 0.9rem;">Competitor Rate Matrix</b></div>
+                <div class="table-container">
+                    <table id="hotelTable">
+                        <thead><tr id="hotelTableHeader"></tr></thead>
+                        <tbody id="hotelTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="otas" class="section hidden">
+            <div class="card" style="padding: 0; overflow: hidden;">
+                <div class="download-btn" style="top:14px; right:14px;" onclick="exportTable('otaTable', 'OTA_Rates')">⬇️</div>
+                <div style="padding: 14px 14px 5px 14px;"><b style="font-size: 0.9rem;">OTA Channel Matrix</b></div>
+                <div class="table-container">
+                    <table id="otaTable">
+                        <thead><tr id="otaTableHeader"></tr></thead>
+                        <tbody id="otaTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="insights" class="section hidden">
+            <div class="card"><div id="insightsSummary"></div></div>
+            <div class="card">
+                <b style="font-size: 0.9rem;">Room Inventory Status</b>
+                <div class="ins-row"><span class="ins-label">Top Sold Out Room</span><span class="tag-sold">Deluxe Suite</span></div>
+                <div class="ins-row" onclick="toggleDrop('dropAvail')"><span class="ins-label">Available Rooms ▾</span><span class="tag-avail">12 Rooms Left</span></div>
+                <div id="dropAvail" class="dropdown-content">
+                    <div class="dropdown-item"><span>Standard Room</span><span>4 Left</span></div>
+                    <div class="dropdown-item"><span>Executive Club</span><span>5 Left</span></div>
+                </div>
+                <div class="ins-row" onclick="toggleDrop('dropDemand')"><span class="ins-label">High Demand Hotels ▾</span><span class="ins-val">View List</span></div>
+                <div id="dropDemand" class="dropdown-content">
+                    <div class="dropdown-item"><span>Oberoi</span><span style="color:red">🔥 High</span></div>
+                    <div class="dropdown-item"><span>Radisson Blu</span><span style="color:red">🔥 High</span></div>
+                </div>
+            </div>
+            <div class="card">
+                <b style="font-size: 0.9rem;">Pricing Insights</b>
+                <div class="ins-row" onclick="toggleDrop('dropHighPrice')"><span class="ins-label">Top High Price Rooms ▾</span><span class="ins-val">₹15,000</span></div>
+                <div id="dropHighPrice" class="dropdown-content">
+                    <div class="dropdown-item"><span>Presidential Suite</span><span>₹25,000</span></div>
+                    <div class="dropdown-item"><span>Luxury Villa</span><span>₹18,500</span></div>
+                </div>
+                <div class="ins-row" onclick="toggleDrop('dropLowMarket')"><span class="ins-label">Lowest Market Rooms ▾</span><span class="ins-val">₹6,500</span></div>
+                <div id="dropLowMarket" class="dropdown-content">
+                    <div class="dropdown-item"><span>Standard (Radisson)</span><span>₹6,500</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="menu">
+        <div class="menu-item active" onclick="switchMenu('dashboard', this)">🏠<br>Home</div>
+        <div class="menu-item" onclick="switchMenu('hotels', this)">🏨<br>Hotels</div>
+        <div class="menu-item" onclick="switchMenu('otas', this)">🌐<br>OTAs</div>
+        <div class="menu-item" onclick="switchMenu('insights', this)">📊<br>Insights</div>
+    </div>
+</div>
+
+<script>
+const dateInput = document.getElementById("datePicker");
+dateInput.value = new Date().toISOString().split('T')[0];
+
+function switchMenu(id, el){
+    document.querySelectorAll('.section').forEach(s=>s.classList.add('hidden'));
+    document.getElementById(id).classList.remove('hidden');
+    document.querySelectorAll('.menu-item').forEach(m=>m.classList.remove('active'));
+    el.classList.add('active');
+}
+
+function toggleLegend(id){
+    let box = document.getElementById(id);
+    box.style.display = box.style.display === "none" ? "block" : "none";
+}
+
+function toggleDrop(id) {
+    let el = document.getElementById(id);
+    el.style.display = el.style.display === "block" ? "none" : "block";
+}
+
+const yourHotel = "Leela Palace";
+const chartColors = ["#3B82F6", "#EF4444", "#F59E0B", "#EAB308", "#14B8A6"];
+
+function getHotels(date){
+    let d = new Date(date).getDate();
+    return [
+        {name:"Oberoi", price:9000+d*10},
+        {name:"ITC Maurya", price:8500+d*12},
+        {name:"Leela Palace", price:10000+d*8},
+        {name:"Radisson Blu", price:7000+d*15},
+        {name:"Hyatt", price:d%2===0?null:8200+d*10}
+    ];
+}
+
+const otaData = [
+    {name:"Official Site", price:8200},
+    {name:"Booking.com", price:9200},
+    {name:"Expedia", price:9400},
+    {name:"Agoda", price:8900},
+    {name:"Goibibo", price:8800}
+];
+
+let hotelChart, otaChart;
+
+function render(){
+    let hotels = getHotels(dateInput.value);
+    let minOTA = Math.min(...otaData.map(o => o.price));
+    let sortedHotels = [...hotels].sort((a,b)=> a.name === yourHotel ? -1 : 1);
+
+    // HOME SUMMARY
+    document.getElementById("hotelSummary").innerHTML = `<b>Best Available Rates</b>` + 
+    sortedHotels.map(h => {
+        if(!h.price) return `<div class="ota"><div>${h.name}</div><div style="color:red;">Sold Out</div></div>`;
+        let diff = h.price - minOTA;
+        let color = diff > 0 ? "#ef4444" : "#10b981";
+        let text = diff > 0 ? `₹${diff} higher` : (diff < 0 ? `₹${Math.abs(diff)} cheaper` : "Best Price");
+        return `<div class="ota"><div>${h.name === yourHotel ? '<b>'+h.name+'</b>' : h.name}</div><div><b>₹${h.price}</b><br><span style="font-size:11px;color:${color}">${text}</span></div></div>`;
+    }).join('');
+
+    let available = hotels.filter(h=>h.price!==null);
+    let prices = available.map(h=>h.price);
+    document.getElementById("avg").innerText="₹"+Math.round(prices.reduce((a,b)=>a+b,0)/prices.length);
+    document.getElementById("min").innerText="₹"+Math.min(...prices);
+    document.getElementById("max").innerText="₹"+Math.max(...prices);
+    document.getElementById("demand").innerText = (hotels.length - available.length) > 0 ? "High 🔥" : "Low";
+
+    // CHARTS DATA
+    let labels=[]; for(let i=0;i<7;i++){ let d=new Date(dateInput.value); d.setDate(d.getDate()+i); labels.push(d.getDate()); }
+
+    // HOTEL CHART
+    let hotelDatasets = available.map((h,i)=>({
+        label:h.name, data:[h.price,h.price+200,h.price-100,h.price+300,h.price+150,h.price+250,h.price+350],
+        borderColor:chartColors[i], tension:0.4, borderWidth:3, pointRadius:2
+    }));
+    if(hotelChart) hotelChart.destroy();
+    hotelChart = new Chart(document.getElementById("hotelChart"), {
+        type:"line", data:{ labels, datasets: hotelDatasets },
+        options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } } }
+    });
+    document.getElementById("legendBox").innerHTML = hotelDatasets.map((d,i)=>`<div class="legend-item"><div class="legend-left"><div class="dot" style="background:${chartColors[i]}"></div>${d.label}</div></div>`).join('');
+
+    // OTA CHART (NEW)
+    let otaDatasets = otaData.map((o,i)=>({
+        label:o.name, data:[o.price,o.price+150,o.price+50,o.price+200,o.price+100,o.price+300,o.price+250],
+        borderColor:chartColors[i % chartColors.length], tension:0.4, borderWidth:3, pointRadius:2
+    }));
+    if(otaChart) otaChart.destroy();
+    otaChart = new Chart(document.getElementById("otaChart"), {
+        type:"line", data:{ labels, datasets: otaDatasets },
+        options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } } }
+    });
+    document.getElementById("otaLegendBox").innerHTML = otaDatasets.map((d,i)=>`<div class="legend-item"><div class="legend-left"><div class="dot" style="background:${chartColors[i % chartColors.length]}"></div>${d.label}</div></div>`).join('');
+
+    // MATRICES
+    const startD = new Date(dateInput.value);
+    function renderMatrix(hId, bId, names) {
+        let head = `<th class="sticky-col">Name</th>`;
+        for(let i=0; i<7; i++) { 
+            let d = new Date(startD); d.setDate(d.getDate() + i); 
+            head += `<th>${d.getDate()} ${d.toLocaleString('en-IN', {month:'short'})}</th>`; 
+        }
+        document.getElementById(hId).innerHTML = head;
+        document.getElementById(bId).innerHTML = names.map(n => {
+            let row = `<tr><td class="sticky-col">${n.name}</td>`;
+            for(let i=0; i<7; i++) row += `<td>₹${(n.price || 8000) + (i * 100)}</td>`;
+            return row + "</tr>";
+        }).join('');
+    }
+    renderMatrix("hotelTableHeader", "hotelTableBody", hotels);
+    renderMatrix("otaTableHeader", "otaTableBody", otaData);
+
+    // INSIGHTS
+    document.getElementById("insightsSummary").innerHTML = `<div style="color:#1f3d2b; font-weight:600;">Market Insight: ${new Date(dateInput.value).toLocaleDateString('en-IN', {day:'numeric', month:'long'})}</div><p style="font-size:12px; color:#64748b; margin-top:5px;">Check OTA price trends to ensure parity across channels.</p>`;
+}
+
+// EXPORTS
+function exportTable(id, name) { XLSX.writeFile(XLSX.utils.table_to_book(document.getElementById(id)), `${name}.xlsx`); }
+function exportCard(id, name) { XLSX.writeFile(XLSX.utils.book_new(), `${name}.xlsx`); }
+function exportChart(chartId, name) { 
+    let chartObj = chartId === 'hotelChart' ? hotelChart : otaChart;
+    let data = chartObj.data.datasets.map(d => ({ Name: d.label, Trend: d.data.join(', ') }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Trend");
+    XLSX.writeFile(wb, `${name}.xlsx`);
+}
+
+dateInput.addEventListener("change", render);
+render();
+</script>
+</body>
+</html>
