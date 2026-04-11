@@ -25,11 +25,12 @@ body { margin:0; font-family:Inter; background:#f3f4f6; }
 }
 .header-top { display:flex; justify-content:space-between; align-items:center; }
 
-/* Calendar Fix */
+/* Calendar Fix - Hiding Clear Buttons */
 input[type="date"]::-webkit-clear-button { display: none; -webkit-appearance: none; }
+input[type="date"]::-ms-clear { display: none; }
 
-.date-picker { background:#2e5a42; border:none; color:white; padding:6px 10px; border-radius:8px; }
-.content { flex:1; overflow-y:auto; padding-bottom:90px; } /* Increased padding for bottom */
+.date-picker { background:#2e5a42; border:none; color:white; padding:6px 10px; border-radius:8px; outline: none; }
+.content { flex:1; overflow-y:auto; padding-bottom:90px; } 
 .section { padding:15px; }
 
 /* CARDS */
@@ -41,9 +42,8 @@ input[type="date"]::-webkit-clear-button { display: none; -webkit-appearance: no
 .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
 .metric { background:white; padding:12px; border-radius:12px; box-shadow:0 5px 15px rgba(0,0,0,0.05); }
 
-/* MATCH BUTTON - Reduced Width */
-.match-btn-container { margin-top: 15px; display: flex; justify-content: flex-end; }
-.match-btn { background: #1f3d2b; color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 12px; width: auto; min-width: 100px; }
+.match-btn-container { margin-top: 15px; display: flex; justify-content: center; }
+.match-btn { background: #1f3d2b; color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 12px; width: auto; min-width: 120px; }
 
 /* SUGGESTED CARD STYLES */
 .suggested-card { background: #f0fdf4; border: 1px dashed #22c55e; border-radius: 16px; padding: 14px; margin-top: 12px; margin-bottom: 20px; }
@@ -105,7 +105,7 @@ th.sticky-col { background: #f8fafc; z-index: 11; }
         <div class="header-top">
             <div>Grand Heritage</div>
             <div style="display:flex; gap:8px;">
-                <input type="date" id="datePicker" class="date-picker">
+                <input type="date" id="datePicker" class="date-picker" required>
                 <div onclick="location.reload()" style="background:#2e5a42;padding:6px 10px;border-radius:8px;cursor:pointer;">🔄</div>
             </div>
         </div>
@@ -114,35 +114,41 @@ th.sticky-col { background: #f8fafc; z-index: 11; }
     <div class="content">
         <div id="dashboard" class="section">
 
-            <div class="card-myHotel">
-                <b>Grand Heritage</b>
-                <div class="room-grid">
-                    <div class="room-item"><span class="room-name">Standard Room</span><span class="room-price">₹3,200</span></div>
-                    <div class="room-item"><span class="room-name">Deluxe Room</span><span class="room-price">₹4,290</span></div>
-                    <div class="room-item"><span class="room-name">Premium Room</span><span class="room-price">₹5,500</span></div>
-                    <div class="room-item"><span class="room-name">Luxury Room</span><span class="room-price">₹13,000</span></div>
-                </div>
-            </div>
-            <div class="grid">
-                <div class="metric"><b id="avg"></b><br>Market Avg Price</div>
-                <div class="metric"><b id="min"></b><br>Market Min Price</div>
-                <div class="metric"><b id="max"></b><br>Market Max Price</div>
-                <div class="metric"><b id="demand"></b><br>Demand</div>
-            </div>
+            <div class="card">
+    <b style="display: block; padding-bottom: 12px; font-size: 18px; color: #1f3d2b;">Market Stats</b>
+    
+    <div class="grid" style="box-shadow: none; padding: 0;">
+        <div class="metric">
+            <b id="avg" style="font-size: 16px;">₹7780</b><br>
+            <span style="font-size: 12px; color: #64748b;">Market Avg Price</span>
+        </div>
+        <div class="metric">
+            <b id="min" style="font-size: 16px;">₹4220</b><br>
+            <span style="font-size: 12px; color: #64748b;">Market Min Price</span>
+        </div>
+        <div class="metric">
+            <b id="max" style="font-size: 16px;">₹10032</b><br>
+            <span style="font-size: 12px; color: #64748b;">Market Max Price</span>
+        </div>
+        <div class="metric">
+            <b id="demand" style="font-size: 16px;">High</b><br>
+            <span style="font-size: 12px; color: #64748b;">Demand</span>
+        </div>
+    </div>
+</div>
             
             <div class="card">
                 <div class="download-btn" onclick="exportCard('hotelSummary', 'Rates_Summary')">⬇️</div>
                 <div id="hotelSummary"></div>
-            </div>
-
-            <div class="match-btn-container">
-                <button class="match-btn" onclick="openMatchModal()">Match Hotel ⚡</button>
+                <div class="match-btn-container">
+                    <button class="match-btn" onclick="openMatchModal()">Match Hotel ⚡</button>
+                </div>  
             </div>
 
             <div class="card">
                 <div class="download-btn" onclick="exportChart('hotelChart', 'Hotel_Trend')">⬇️</div>
                 <b>Hotel Price Trend (7 Days)</b>
-                <div style="height:220px;"><canvas id="hotelChart"></canvas></div>
+                <div><canvas id="hotelChart"></canvas></div>
                 <div onclick="toggleLegend('legendBox')" class="legend-toggle">Show Legend ▼</div>
                 <div id="legendBox" style="display:none; margin-top:10px;"></div>
             </div>
@@ -150,7 +156,7 @@ th.sticky-col { background: #f8fafc; z-index: 11; }
             <div class="card">
                 <div class="download-btn" onclick="exportChart('otaChart', 'OTA_Trend')">⬇️</div>
                 <b>OTA Price Trend (7 Days)</b>
-                <div style="height:220px;"><canvas id="otaChart"></canvas></div>
+                <div><canvas id="otaChart"></canvas></div>
                 <div onclick="toggleLegend('otaLegendBox')" class="legend-toggle">Show Legend ▼</div>
                 <div id="otaLegendBox" style="display:none; margin-top:10px;"></div>
             </div>
@@ -204,9 +210,25 @@ th.sticky-col { background: #f8fafc; z-index: 11; }
                     </table>
                 </div>
             </div>
+            <div class="card">
+                <div class="download-btn" onclick="exportChart('otaChartTab', 'OTA_Trend_Tab')">⬇️</div>
+                <b>OTA Price Trend (7 Days)</b>
+                <div><canvas id="otaChartTab"></canvas></div>
+                <div onclick="toggleLegend('otaLegendBoxTab')" class="legend-toggle">Show Legend ▼</div>
+                <div id="otaLegendBoxTab" style="display:none; margin-top:10px;"></div>
+            </div>
         </div>
 
         <div id="insights" class="section hidden">
+             <div class="card-myHotel">
+                <b>Grand Heritage</b>
+                <div class="room-grid">
+                    <div class="room-item"><span class="room-name">Standard Room</span><span class="room-price">₹3,200</span></div>
+                    <div class="room-item"><span class="room-name">Deluxe Room</span><span class="room-price">₹4,290</span></div>
+                    <div class="room-item"><span class="room-name">Premium Room</span><span class="room-price">₹5,500</span></div>
+                    <div class="room-item"><span class="room-name">Luxury Room</span><span class="room-price">₹13,000</span></div>
+                </div>
+            </div>
             <div class="card"><div id="insightsSummary"></div></div>
             <div class="card">
                 <b style="font-size: 0.9rem;">Room Inventory Status</b>
@@ -245,6 +267,15 @@ th.sticky-col { background: #f8fafc; z-index: 11; }
 <script>
 const dateInput = document.getElementById("datePicker");
 dateInput.value = new Date().toISOString().split('T')[0];
+dateInput.required = true;
+
+// Prevent manual clearing of the date field
+dateInput.addEventListener('input', function() {
+    if (!this.value) {
+        this.value = new Date().toISOString().split('T')[0];
+        render();
+    }
+});
 
 function openMatchModal() { document.getElementById('matchModal').style.display = 'flex'; }
 function closeMatchModal() { document.getElementById('matchModal').style.display = 'none'; }
@@ -271,11 +302,16 @@ function toggleHotelAccordion(id) {
     content.classList.toggle('active');
 }
 
-const yourHotel = "Leela Palace";
-const chartColors = ["#3B82F6", "#EF4444", "#F59E0B", "#EAB308", "#14B8A6"];
+const yourHotel = "Grand Heritage";
+const chartColors = ["#1f3d2b", "#3B82F6", "#EF4444", "#F59E0B", "#EAB308", "#14B8A6"];
 
-function getHotels(date){
+function getMyHotelRates(date) {
     let d = new Date(date).getDate();
+    return { name: yourHotel, price: 4200 + (d || 1) * 5 };
+}
+
+function getCompetitors(date){
+    let d = new Date(date).getDate() || 1;
     return [
         {name:"Oberoi", price:9000+d*10},
         {name:"ITC Maurya", price:8500+d*12},
@@ -290,56 +326,79 @@ const otaData = [
     {name:"Booking.com", price:9200}, {name:"Agoda", price:8900}, {name:"Expedia", price:9400}
 ];
 
-let hotelChart, otaChart;
+let hotelChart, otaChart, otaChartTab;
 
 function render(){
-    let hotels = getHotels(dateInput.value);
+    if(!dateInput.value) return;
+    
+    let myHotelData = getMyHotelRates(dateInput.value);
+    let competitors = getCompetitors(dateInput.value);
     let minOTA = Math.min(...otaData.map(o => o.price));
-    let sortedHotels = [...hotels].sort((a,b)=> a.name === yourHotel ? -1 : 1);
+    
+    let summaryList = [myHotelData, ...competitors];
 
-    document.getElementById("hotelSummary").innerHTML = `<b>Best Available Rates</b>` + 
-    sortedHotels.map(h => {
+    document.getElementById("hotelSummary").innerHTML = `<b style="display: block; padding-bottom: 12px; font-size:18px;">Best Available Rates</b>` + 
+    summaryList.map(h => {
         if(!h.price) return `<div class="ota"><div>${h.name}</div><div style="color:red;">Sold Out</div></div>`;
         let diff = h.price - minOTA;
         let color = diff > 0 ? "#ef4444" : "#10b981";
         let text = diff > 0 ? `₹${diff} higher` : (diff < 0 ? `₹${Math.abs(diff)} cheaper` : "Best Price");
-        return `<div class="ota"><div>${h.name === yourHotel ? '<b>'+h.name+'</b>' : h.name}</div><div><b>₹${h.price}</b><br><span style="font-size:11px;color:${color}">${text}</span></div></div>`;
+        const isMine = h.name === yourHotel;
+        return `
+            <div class="ota" style="${isMine ? 'margin:4px -10px; padding:8px 10px; border-radius:8px;' : ''}">
+                <div>${h.name}</div>
+                <div><b>₹${h.price}</b><br><span style="font-size:11px;color:${color}">${text}</span></div>
+            </div>`;
     }).join('');
 
-    let available = hotels.filter(h=>h.price!==null);
+    let available = summaryList.filter(h=>h.price!==null);
     let prices = available.map(h=>h.price);
     document.getElementById("avg").innerText="₹"+Math.round(prices.reduce((a,b)=>a+b,0)/prices.length);
     document.getElementById("min").innerText="₹"+Math.min(...prices);
     document.getElementById("max").innerText="₹"+Math.max(...prices);
-    document.getElementById("demand").innerText = (hotels.length - available.length) > 0 ? "High" : "Low";
+    document.getElementById("demand").innerText = (competitors.length - competitors.filter(c=>c.price).length) > 0 ? "High" : "Low";
 
-    let labels=[]; for(let i=0;i<7;i++){ let d=new Date(dateInput.value); d.setDate(d.getDate()+i); labels.push(d.getDate()); }
+    let labels=[]; 
+    for(let i=0;i<7;i++){ 
+        let d=new Date(dateInput.value); 
+        d.setDate(d.getDate()+i); 
+        labels.push(d.getDate()); 
+    }
 
     let hotelDatasets = available.map((h,i)=>({
         label:h.name, data:[h.price,h.price+200,h.price-100,h.price+300,h.price+150,h.price+250,h.price+350],
-        borderColor:chartColors[i], tension:0.4, borderWidth:3, pointRadius:2
+        borderColor:chartColors[i % chartColors.length], tension:0.4, borderWidth:3, pointRadius:2
     }));
+
     if(hotelChart) hotelChart.destroy();
     hotelChart = new Chart(document.getElementById("hotelChart"), {
         type:"line", data:{ labels, datasets: hotelDatasets },
         options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } } }
     });
-    document.getElementById("legendBox").innerHTML = hotelDatasets.map((d,i)=>`<div class="legend-item"><div class="legend-left"><div class="dot" style="background:${chartColors[i]}"></div>${d.label}</div></div>`).join('');
+    document.getElementById("legendBox").innerHTML = hotelDatasets.map(d=>`<div class="legend-item"><div class="legend-left"><div class="dot" style="background:${d.borderColor}"></div>${d.label}</div></div>`).join('');
 
     let otaDatasets = otaData.map((o,i)=>({
         label:o.name, data:[o.price,o.price+150,o.price+50,o.price+200,o.price+100,o.price+300,o.price+250],
-        borderColor:chartColors[i % chartColors.length], tension:0.4, borderWidth:3, pointRadius:2
+        borderColor:chartColors[(i+1) % chartColors.length], tension:0.4, borderWidth:3, pointRadius:2
     }));
+
     if(otaChart) otaChart.destroy();
     otaChart = new Chart(document.getElementById("otaChart"), {
         type:"line", data:{ labels, datasets: otaDatasets },
         options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } } }
     });
-    document.getElementById("otaLegendBox").innerHTML = otaDatasets.map((d,i)=>`<div class="legend-item"><div class="legend-left"><div class="dot" style="background:${chartColors[i % chartColors.length]}"></div>${d.label}</div></div>`).join('');
+    document.getElementById("otaLegendBox").innerHTML = otaDatasets.map(d=>`<div class="legend-item"><div class="legend-left"><div class="dot" style="background:${d.borderColor}"></div>${d.label}</div></div>`).join('');
+
+    if(otaChartTab) otaChartTab.destroy();
+    otaChartTab = new Chart(document.getElementById("otaChartTab"), {
+        type:"line", data:{ labels, datasets: otaDatasets },
+        options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } } }
+    });
+    document.getElementById("otaLegendBoxTab").innerHTML = otaDatasets.map(d=>`<div class="legend-item"><div class="legend-left"><div class="dot" style="background:${d.borderColor}"></div>${d.label}</div></div>`).join('');
 
     const startD = new Date(dateInput.value);
     let accHtml = "";
-    hotels.forEach((hotel, idx) => {
+    competitors.forEach((hotel, idx) => {
         let tableId = `acc-hotel-${idx}`;
         accHtml += `<div class="hotel-accordion"><div class="acc-header" onclick="toggleHotelAccordion('${tableId}')"><span>🏨 ${hotel.name}</span><span style="font-size:12px; color:#3b82f6;">View OTAs ▾</span></div><div id="${tableId}" class="acc-content"><div class="table-container"><table><thead><tr><th class="sticky-col">Channels</th>${[...Array(7)].map((_, i) => { let d = new Date(startD); d.setDate(d.getDate() + i); return `<th>${d.getDate()} ${d.toLocaleString('en-IN', {month:'short'})}</th>`; }).join('')}</tr></thead><tbody><tr style="background:#f0f9ff; font-weight:600;"><td class="sticky-col" style="background:#f0f9ff;">Direct Rate</td>${[...Array(7)].map((_, i) => `<td>₹${(hotel.price || 8500) + (i * 100)}</td>`).join('')}</tr>${otaData.map(ota => `<tr><td class="sticky-col" style="color:#3b82f6;">${ota.name}.com</td>${[...Array(7)].map((_, i) => `<td>₹${(hotel.price || 8500) + (i * 100) - 50}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div></div>`;
     });
@@ -360,7 +419,7 @@ function render(){
 function exportTable(id, name) { XLSX.writeFile(XLSX.utils.table_to_book(document.getElementById(id)), `${name}.xlsx`); }
 function exportCard(id, name) { XLSX.writeFile(XLSX.utils.book_new(), `${name}.xlsx`); }
 function exportChart(chartId, name) { 
-    let chartObj = chartId === 'hotelChart' ? hotelChart : otaChart;
+    let chartObj = Chart.getChart(document.getElementById(chartId));
     let data = chartObj.data.datasets.map(d => ({ Name: d.label, Trend: d.data.join(', ') }));
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
